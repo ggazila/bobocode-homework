@@ -1,6 +1,7 @@
 package com.example.context.impl;
 
 
+import com.example.annotation.Autowired;
 import com.example.annotation.Bean;
 import com.example.context.ApplicationContext;
 import com.example.exception.NoSuchBeanException;
@@ -11,10 +12,8 @@ import org.apache.commons.text.WordUtils;
 import org.reflections.Reflections;
 import org.reflections.scanners.Scanners;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.lang.reflect.Field;
+import java.util.*;
 
 import static java.util.stream.Collectors.toMap;
 
@@ -23,6 +22,21 @@ public class ApplicationContextImpl implements ApplicationContext {
 
 	public ApplicationContextImpl(String packageName) {
 		scanPackage(packageName);
+		injectFields();
+	}
+
+	private void injectFields() {
+		for (Object bean : beanMap.values()) {
+			Arrays.stream(bean.getClass().getDeclaredFields())
+					.filter(field -> field.isAnnotationPresent(Autowired.class))
+					.forEach(field -> injectField(bean, field));
+		}
+	}
+
+	@SneakyThrows
+	private void injectField(Object value, Field field) {
+		field.setAccessible(true);
+		field.set(value, getBean(field.getType()));
 	}
 
 	@SneakyThrows
